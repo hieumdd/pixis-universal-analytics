@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - dev
+      # - dev
   workflow_dispatch:
 
 concurrency: ${{ github.ref }}

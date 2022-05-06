@@ -43,20 +43,23 @@ def _transform_service(reports: list[Report]):
             for k, v in dict(zip(dimension_header, row["dimensions"])).items()
         }
         metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
-        
+
         return {
             **dimension_values,
             **metric_values,
         }
 
     def _svc(report_res_pages: list[list[ReportRes]]):
-        transformed_pages = [_transform(res) for page in report_res_pages for res in page]
+        transformed_pages = [
+            [_transform(res) for res in page] for page in report_res_pages
+        ]
         transformed = [list(i) for i in zip(*transformed_pages)]
         with_batched_at = [
             {
                 **row,
                 "_batched_at": datetime.utcnow().isoformat(timespec="seconds"),
-            } for row in transformed
+            }
+            for row in transformed
         ]
         return with_batched_at
 
