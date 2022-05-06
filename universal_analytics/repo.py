@@ -1,7 +1,7 @@
 from typing import Any, Callable, Union, Optional
 import os
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import urljoin
 
 import httpx
@@ -43,7 +43,7 @@ def build_request(
 
 ColumnHeader = dict[str, Any]
 Rows = dict[str, Any]
-ReportRes = tuple[list[dict[str, Any]], list[dict[str, Any]]]
+ReportRes = tuple[list[list[ColumnHeader]], list[list[Rows]]]
 
 
 def get_report(
@@ -77,3 +77,30 @@ def get_report(
         if all(is_lasts)
         else _return + get_report(resource, builders, tokens, is_lasts)
     )
+
+def _transform_report(column_header: ColumnHeader, row: Rows):
+    dimension_header = [i.replace("ga:", "") for i in column_header["dimensions"]]
+    metric_header = [
+        i["name"].replace("ga:", "")
+        for i in column_header["metricHeader"]["metricHeaderEntries"]
+    ]
+
+    dimension_values = {
+        k: datetime.strptime(v, "%Y%m%d").date().isoformat() if k == "date" else v
+        for k, v in dict(zip(dimension_header, row["dimensions"])).items()
+    }
+    metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
+
+    return {
+        **dimension_values,
+        **metric_values,
+    }
+
+def transform_page(report_page: ReportRes):
+    return [
+        [
+            _transform_report(column_header, row)
+            for column_header, row in zip(column_headers, rows)
+        ]
+        for column_headers, rows in report_page
+    ]

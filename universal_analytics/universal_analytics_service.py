@@ -5,12 +5,18 @@ from compose import compose
 
 from universal_analytics.report.interface import Report
 from universal_analytics.report import REPORTS
-from universal_analytics.repo import get_resource, build_request, get_report, ReportRes
+from universal_analytics.repo import (
+    get_resource,
+    build_request,
+    get_report,
+    transform_page,
+    ReportRes,
+)
 from db.bigquery import load, update
 
 
 def get_service(reports: list[Report]):
-    def _svc(start, end):
+    def _svc(start, end) -> list[ReportRes]:
         reports_length = len(reports)
 
         builders = [
@@ -28,40 +34,20 @@ def get_service(reports: list[Report]):
     return _svc
 
 
-def _transform_service(reports: list[Report]):
-    def _transform(report_res):
-        column_header, row = report_res
-
-        dimension_header = [i.replace("ga:", "") for i in column_header["dimensions"]]
-        metric_header = [
-            i["name"].replace("ga:", "")
-            for i in column_header["metricHeader"]["metricHeaderEntries"]
-        ]
-
-        dimension_values = {
-            k: datetime.strptime(v, "%Y%m%d").date().isoformat() if k == "date" else v
-            for k, v in dict(zip(dimension_header, row["dimensions"])).items()
-        }
-        metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
-
-        return {
-            **dimension_values,
-            **metric_values,
-        }
-
-    def _svc(report_res_pages: list[list[ReportRes]]):
-        transformed_pages = [
-            [_transform(res) for res in page] for page in report_res_pages
-        ]
-        transformed = [list(i) for i in zip(*transformed_pages)]
-        with_batched_at = [
+def _transform_service(report_res_pages: list[ReportRes]):
+    transformed_pages = [transform_page(page) for page in report_res_pages]
+    transformed_reports = [list(i) for i in zip(*transformed_pages)]
+    with_batched_at = [
+        [
             {
                 **row,
                 "_batched_at": datetime.utcnow().isoformat(timespec="seconds"),
             }
-            for row in transformed
+            for row in report
         ]
-        return with_batched_at
+        for report in transformed_reports
+    ]
+    return with_batched_at
 
 
 # def pipeline_service(
