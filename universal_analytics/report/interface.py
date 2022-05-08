@@ -11,12 +11,11 @@ class Report:
 
     def __post_init__(self):
         self.schema = (
-            [
+            [{"name": "_id", "type": "STRING"}]
+            + [
                 {"name": key, "type": "DATE" if key == "date" else "STRING"}
                 for key in self.dimensions
             ]
             + [{"name": key, "type": "NUMERIC"} for key in self.metrics]
-            + [
-                {"name": "_batched_at", "type": "TIMESTAMP"}
-            ]
+            + [{"name": "_batched_at", "type": "TIMESTAMP"}]
         )

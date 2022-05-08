@@ -1,12 +1,12 @@
 from typing import Any, Callable, Optional
 from datetime import date, datetime
+from hashlib import sha256
 
 from google.auth import default
 from googleapiclient.discovery import build, Resource
 
 VIEW_ID = "247980254"
-# PAGE_SIZE = 50_000
-PAGE_SIZE = 10
+PAGE_SIZE = 50_000
 
 
 def get_resource() -> Resource:
@@ -98,6 +98,14 @@ def _transform_report(column_header: ColumnHeader, rows: Row):
 
     return [
         {
+            "_id": sha256(
+                "|".join(
+                    [
+                        f"{k}:{dimension_value[k]}"
+                        for k in sorted(dimension_value.keys())
+                    ]
+                ).encode("utf-8")
+            ).hexdigest(),
             **dimension_value,
             **metric_value,
         }
