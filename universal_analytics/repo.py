@@ -93,7 +93,7 @@ def _transform_report(column_header: ColumnHeader, rows: Row):
         for row in rows
     ]
     metric_values = [
-        dict(zip(metric_header, row["metrics"][0]["values"])) for row in rows  # type: ignore
+        {k: round(float(v), 6) for k, v in zip(metric_header, row["metrics"][0]["values"])} for row in rows  # type: ignore
     ]
 
     return [

@@ -4,6 +4,5 @@ REPORTS = [
     i.report
     for i in [
         acquisitions,
-        acquisitions,
     ]
 ]

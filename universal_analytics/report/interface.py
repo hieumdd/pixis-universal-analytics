@@ -1,6 +1,7 @@
 from typing import Any
 from dataclasses import dataclass, field
 
+
 @dataclass
 class Report:
     name: str
@@ -15,5 +16,7 @@ class Report:
                 for key in self.dimensions
             ]
             + [{"name": key, "type": "NUMERIC"} for key in self.metrics]
-            + [{"name": "_batched_at", "type": "TIMESTAMP"}]
+            + [
+                {"name": "_batched_at", "type": "TIMESTAMP"}
+            ]
         )

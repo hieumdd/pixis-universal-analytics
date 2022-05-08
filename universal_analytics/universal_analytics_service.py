@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 from datetime import datetime, timedelta, date
 from compose import compose
@@ -12,7 +12,7 @@ from universal_analytics.repo import (
     transform_page,
     ReportRes,
 )
-from db.bigquery import load, update
+from db.bigquery import load
 
 DATE_FORMAT = "%Y-%m-%d"
 
@@ -25,7 +25,8 @@ def _get_timeframe(input_: Optional[str], days: int) -> date:
     )
 
 
-def _get_service(start: Optional[str], end: Optional[str]) -> list[ReportRes]:
+def _get_service(timeframe: tuple[Optional[str], Optional[str]]) -> list[ReportRes]:
+    start, end = timeframe
     _start, _end = [
         _get_timeframe(input_, fallback)
         for input_, fallback in (
@@ -63,10 +64,10 @@ def _transform_service(report_res_pages: list[ReportRes]):
     ]
 
 
-def _load_service(rowss) -> list[int]:
+def _load_service(rowss: list[list[dict[str, Any]]]) -> list[int]:
     def _check_running(jobs: list[LoadJob]):
         is_dones = [job.done() for job in jobs]
-        return jobs if all(is_dones) else _check_running(jobs)
+        return [job.result() for job in jobs] if all(is_dones) else _check_running(jobs)
 
     jobs = [
         load(rows, pipeline.name, pipeline.schema)
@@ -75,23 +76,21 @@ def _load_service(rowss) -> list[int]:
     return [job.output_rows for job in _check_running(jobs)]
 
 
-# def pipeline_service(
-#     start: Optional[str],
-#     end: Optional[str],
-# ) -> dict[str, Union[str, int]]:
-#     return compose(
-#         lambda x: {
-#             "table": pipeline.name,
-#             "start": start,
-#             "end": end,
-#             "output_rows": x,
-#         },
-#         load(
-#             pipeline.name,
-#             pipeline.schema,
-#             update(pipeline.id_key, pipeline.cursor_key),
-#         ),
-#         pipeline.transform,
-#         pipeline.get,
-#         pipeline.params_fn(pipeline.name, pipeline.cursor_key),
-#     )((start, end))
+def pipeline_service(
+    start: Optional[str],
+    end: Optional[str],
+) -> dict[str, Union[str, int]]:
+    return compose(
+        lambda x: [
+            {
+                "table": report.name,
+                "start": start,
+                "end": end,
+                "output_rows": output_row,
+            }
+            for output_row, report in zip(x, REPORTS)
+        ],
+        _load_service,
+        _transform_service,
+        _get_service,
+    )((start, end))

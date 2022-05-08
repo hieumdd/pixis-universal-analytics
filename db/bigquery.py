@@ -1,11 +1,11 @@
-from typing import Callable, Any, Optional
+from typing import Any
 from datetime import datetime
 
 from google.cloud import bigquery
 
 BQ_CLIENT = bigquery.Client()
 
-DATASET = "Callio"
+DATASET = "UniversalAnalytics"
 
 
 def get_last_timestamp(table: str, time_key: str) -> datetime:
@@ -22,11 +22,15 @@ def load(
 ) -> bigquery.LoadJob:
     return BQ_CLIENT.load_table_from_json(  # type: ignore
         data,
-        f"{DATASET}.{table}",
+        f"{DATASET}.p_{table}",
         job_config=bigquery.LoadJobConfig(
             create_disposition="CREATE_IF_NEEDED",
             write_disposition="WRITE_APPEND",
             schema=schema,
+            time_partitioning=bigquery.TimePartitioning(
+                type_=bigquery.TimePartitioningType.DAY,
+                field="_batched_at",
+            ),
         ),
     )
 
