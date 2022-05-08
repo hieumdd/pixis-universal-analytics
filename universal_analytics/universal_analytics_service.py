@@ -80,7 +80,7 @@ def pipeline_service(
     start: Optional[str],
     end: Optional[str],
 ) -> dict[str, Union[str, int]]:
-    return compose(
+    results = compose(
         lambda x: [
             {
                 "table": report.name,
@@ -94,3 +94,5 @@ def pipeline_service(
         _transform_service,
         _get_service,
     )((start, end))
+
+    return {"results": results}
