@@ -1,18 +1,10 @@
 from typing import Any
-from datetime import datetime
 
 from google.cloud import bigquery
 
-BQ_CLIENT = bigquery.Client()
+client = bigquery.Client()
 
 DATASET = "UniversalAnalytics"
-
-
-def get_last_timestamp(table: str, time_key: str) -> datetime:
-    rows = BQ_CLIENT.query(
-        f"SELECT MAX({time_key}) AS incre FROM {DATASET}.{table}"
-    ).result()
-    return [row for row in rows][0]["incre"]
 
 
 def load(
@@ -20,7 +12,7 @@ def load(
     table: str,
     schema: list[dict[str, Any]],
 ) -> bigquery.LoadJob:
-    return BQ_CLIENT.load_table_from_json(  # type: ignore
+    return client.load_table_from_json(  # type: ignore
         data,
         f"{DATASET}.p_{table}",
         job_config=bigquery.LoadJobConfig(
@@ -29,25 +21,7 @@ def load(
             schema=schema,
             time_partitioning=bigquery.TimePartitioning(
                 type_=bigquery.TimePartitioningType.DAY,
-                field="_batched_at",
+                field="date",
             ),
         ),
     )
-
-
-def update(id_key: list[str], time_key: str):
-    def _update(table: str):
-        BQ_CLIENT.query(
-            f"""
-        CREATE OR REPLACE TABLE {DATASET}.{table} AS
-        SELECT * EXCEPT(row_num)
-        FROM (
-            SELECT
-                *,
-                ROW_NUMBER() OVER (PARTITION BY {','.join(id_key)} ORDER BY {time_key} DESC) AS row_num,
-            FROM {DATASET}.{table}
-        ) WHERE row_num = 1
-        """
-        ).result()
-
-    return _update
