@@ -2,8 +2,8 @@ from typing import Union, Optional
 
 from datetime import datetime, timedelta, date
 from compose import compose
+from google.cloud.bigquery import LoadJob
 
-from universal_analytics.report.interface import Report
 from universal_analytics.report import REPORTS
 from universal_analytics.repo import (
     get_resource,
@@ -61,6 +61,18 @@ def _transform_service(report_res_pages: list[ReportRes]):
         ]
         for report in reports
     ]
+
+
+def _load_service(rowss) -> list[int]:
+    def _check_running(jobs: list[LoadJob]):
+        is_dones = [job.done() for job in jobs]
+        return jobs if all(is_dones) else _check_running(jobs)
+
+    jobs = [
+        load(rows, pipeline.name, pipeline.schema)
+        for rows, pipeline in zip(rowss, REPORTS)
+    ]
+    return [job.output_rows for job in _check_running(jobs)]
 
 
 # def pipeline_service(

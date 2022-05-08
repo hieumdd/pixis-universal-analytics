@@ -16,30 +16,19 @@ def get_last_timestamp(table: str, time_key: str) -> datetime:
 
 
 def load(
-    table: str, schema: list[dict[str, Any]], update_fn: Callable[[str], None] = None
-):
-    def _load(data: list[dict[str, Any]]) -> int:
-        if len(data) == 0:
-            return 0
-
-        output_rows = (
-            BQ_CLIENT.load_table_from_json(  # type: ignore
-                data,
-                f"{DATASET}.{table}",
-                job_config=bigquery.LoadJobConfig(
-                    create_disposition="CREATE_IF_NEEDED",
-                    write_disposition="WRITE_APPEND" if update_fn else "WRITE_TRUNCATE",
-                    schema=schema,
-                ),
-            )
-            .result()
-            .output_rows
-        )
-        if update_fn:
-            update_fn(table)
-        return output_rows
-
-    return _load
+    data: list[dict[str, Any]],
+    table: str,
+    schema: list[dict[str, Any]],
+) -> bigquery.LoadJob:
+    return BQ_CLIENT.load_table_from_json(  # type: ignore
+        data,
+        f"{DATASET}.{table}",
+        job_config=bigquery.LoadJobConfig(
+            create_disposition="CREATE_IF_NEEDED",
+            write_disposition="WRITE_APPEND",
+            schema=schema,
+        ),
+    )
 
 
 def update(id_key: list[str], time_key: str):
