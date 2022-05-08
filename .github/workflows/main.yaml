@@ -12,7 +12,7 @@ concurrency: ${{ github.ref }}
 env:
   ENV_KEY: env-vars
   ENV_FILE: env.yaml
-  GCP_SA: bi-reti@reti-vn-1.iam.gserviceaccount.com
+  GCP_SA: universal-analytics@eaglytics-project.iam.gserviceaccount.com
 
 jobs:
   set-env:
@@ -23,14 +23,14 @@ jobs:
       - name: Set env vars (dev)
         if: github.ref_name == 'dev'
         run: |
-          echo "FUNCTION_NAME=reti-callio-dev" >> $GITHUB_ENV
-          echo "PUBLIC_URL=https://us-central1-reti-vn-1.cloudfunctions.net/reti-callio-dev" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=pixis-universal-analytics-dev" >> $GITHUB_ENV
+          echo "PUBLIC_URL=https://us-central1-eaglytics-project.cloudfunctions.net/pixis-universal-analytics-dev" >> $GITHUB_ENV
 
       - name: Set env vars (prod)
         if: github.ref_name == 'master'
         run: |
-          echo "FUNCTION_NAME=reti-callio" >> $GITHUB_ENV
-          echo "PUBLIC_URL=https://us-central1-reti-vn-1.cloudfunctions.net/reti-callio" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=pixis-universal-analytics" >> $GITHUB_ENV
+          echo "PUBLIC_URL=https://us-central1-eaglytics-project.cloudfunctions.net/pixis-universal-analytics" >> $GITHUB_ENV
 
       - id: set-fn-name
         name: Set Function Name
@@ -38,7 +38,6 @@ jobs:
 
       - name: Create ${{ env.ENV_KEY }}
         run: |
-          echo "CALLIO_TOKEN: ${{ secrets.CALLIO_TOKEN }}" >> ${{ env.ENV_FILE }}
           echo "GCP_SA: ${{ env.GCP_SA }}" >> ${{ env.ENV_FILE }}
           echo "PUBLIC_URL: ${{ env.PUBLIC_URL }}" >> ${{ env.ENV_FILE }}
 
@@ -73,8 +72,8 @@ jobs:
           gcloud functions deploy ${{ needs.set-env.outputs.fn-name }}
           --entry-point=main
           --region=us-central1
-          --timeout=530
-          --memory=4096MB
+          --timeout=300
+          --memory=1024MB
           --runtime=python39
           --trigger-http
           --no-user-output-enabled
