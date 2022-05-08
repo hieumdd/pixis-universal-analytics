@@ -1,4 +1,4 @@
-from universal_analytics.report import acquisitions
+from ua.report import acquisitions
 
 REPORTS = [
     i.report

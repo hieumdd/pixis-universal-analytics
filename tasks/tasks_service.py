@@ -1,4 +1,4 @@
-from universal_analytics.pipeline import pipelines
+# from universal_analytics.pipeline import pipelines
 from tasks import cloud_tasks
 
 
@@ -11,7 +11,8 @@ def create_tasks_service(body: dict[str, str]) -> dict[str, int]:
                     "start": body.get("start"),
                     "end": body.get("end"),
                 }
-                for table in pipelines.keys()
+                for table in []
+                # for table in pipelines.keys()
             ],
             lambda x: x["table"],
         )

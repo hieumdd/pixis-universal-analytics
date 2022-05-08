@@ -1,12 +1,11 @@
 import pytest
 
-from universal_analytics.pipeline import pipelines
-from universal_analytics import universal_analytics_service
-from tasks import tasks_service
+from ua import ua_service
+# from tasks import tasks_service
 
 TIME_FRAME = [
-    ("auto", (None, None)),
-    # ("manual", ("2022-04-01", "2022-05-01")),
+    # ("auto", (None, None)),
+    ("manual", ("2022-03-01", "2022-06-01")),
 ]
 
 
@@ -18,25 +17,27 @@ def timeframe(request):
     return request.param
 
 
-class TestCallio:
-    @pytest.mark.parametrize(
-        "pipeline",
-        pipelines.values(),
-        ids=pipelines.keys(),
-    )
-    def test_service(self, pipeline, timeframe):
-        res = universal_analytics_service.pipeline_service(pipeline, *timeframe)
-        print(res)
-        assert res["output_rows"] >= 0
-
-
-class TestTasks:
-    def test_service(self, timeframe):
-        res = tasks_service.create_tasks_service(
-            {
-                "start": timeframe[0],
-                "end": timeframe[1],
-            }
+class TestUniversalAnalytics:
+    def test_get_transform_service(self, timeframe):
+        res = ua_service._transform_service(
+            ua_service._get_service(timeframe),
         )
         print(res)
-        assert res["tasks"] > 0
+        assert res
+
+    def test_pipeline_service(self, timeframe):
+        res = ua_service.pipeline_service(*timeframe)
+        print(res)
+        assert res
+
+
+# class TestTasks:
+#     def test_service(self, timeframe):
+#         res = tasks_service.create_tasks_service(
+#             {
+#                 "start": timeframe[0],
+#                 "end": timeframe[1],
+#             }
+#         )
+#         print(res)
+#         assert res["tasks"] > 0

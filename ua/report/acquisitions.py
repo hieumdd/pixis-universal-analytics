@@ -1,4 +1,4 @@
-from universal_analytics.report.interface import Report
+from ua.report.interface import Report
 
 report = Report(
     "Acquisitions",

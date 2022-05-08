@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, date
 from compose import compose
 from google.cloud.bigquery import LoadJob
 
-from universal_analytics.report import REPORTS
-from universal_analytics.repo import (
+from ua.report import REPORTS
+from ua.repo import (
     get_resource,
     build_request,
     get_report,
