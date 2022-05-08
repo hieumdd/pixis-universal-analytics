@@ -1,6 +1,6 @@
 from typing import Union, Optional
 
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from compose import compose
 
 from universal_analytics.report.interface import Report
@@ -14,30 +14,44 @@ from universal_analytics.repo import (
 )
 from db.bigquery import load, update
 
+DATE_FORMAT = "%Y-%m-%d"
 
-def get_service(reports: list[Report]):
-    def _svc(start, end) -> list[ReportRes]:
-        reports_length = len(reports)
 
-        builders = [
-            build_request(report.dimensions, report.metrics, start, end)
-            for report in reports
-        ]
+def _get_timeframe(input_: Optional[str], days: int) -> date:
+    return (
+        datetime.strptime(input_, "%Y-%m-%d").date()
+        if input_
+        else (datetime.utcnow() - timedelta(days=days)).date()
+    )
 
-        return get_report(
-            get_resource(),
-            builders,
-            [None] * reports_length,
-            [False] * reports_length,
+
+def _get_service(start: Optional[str], end: Optional[str]) -> list[ReportRes]:
+    _start, _end = [
+        _get_timeframe(input_, fallback)
+        for input_, fallback in (
+            (start, 2),
+            (end, 0),
         )
+    ]
+    reports_length = len(REPORTS)
 
-    return _svc
+    builders = [
+        build_request(report.dimensions, report.metrics, _start, _end)
+        for report in REPORTS
+    ]
+
+    return get_report(
+        get_resource(),
+        builders,
+        [None] * reports_length,
+        [False] * reports_length,
+    )
 
 
 def _transform_service(report_res_pages: list[ReportRes]):
-    transformed_pages = [transform_page(page) for page in report_res_pages]
-    transformed_reports = [list(i) for i in zip(*transformed_pages)]
-    with_batched_at = [
+    pages = [transform_page(page) for page in report_res_pages]
+    reports = [[i for j in report for i in j] for report in zip(*pages)]
+    return [
         [
             {
                 **row,
@@ -45,9 +59,8 @@ def _transform_service(report_res_pages: list[ReportRes]):
             }
             for row in report
         ]
-        for report in transformed_reports
+        for report in reports
     ]
-    return with_batched_at
 
 
 # def pipeline_service(

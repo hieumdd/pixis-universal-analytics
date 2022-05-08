@@ -1,15 +1,12 @@
-from typing import Any, Callable, Union, Optional
-import os
-import asyncio
+from typing import Any, Callable, Optional
 from datetime import date, datetime
-from urllib.parse import urljoin
 
-import httpx
 from google.auth import default
 from googleapiclient.discovery import build, Resource
 
-VIEW_ID = 123
-PAGE_SIZE = 50_000
+VIEW_ID = "247980254"
+# PAGE_SIZE = 50_000
+PAGE_SIZE = 10
 
 
 def get_resource() -> Resource:
@@ -41,9 +38,10 @@ def build_request(
 
     return _build
 
+
 ColumnHeader = dict[str, Any]
-Rows = dict[str, Any]
-ReportRes = tuple[list[list[ColumnHeader]], list[list[Rows]]]
+Row = dict[str, Any]
+ReportRes = tuple[list[ColumnHeader], list[Row]]
 
 
 def get_report(
@@ -63,10 +61,11 @@ def get_report(
         )
         .execute()["reports"]
     )
-    column_headers = [i for i in res["columnHeader"]]
-    tokens = [i for i in res["nextPageToken"]]
+    column_headers = [i["columnHeader"] for i in res]
+    tokens = [i.get("nextPageToken") for i in res]
     rows = [
-        row if is_last else [] for row, is_last in zip(res["data"]["rows"], is_lasts)
+        row["data"]["rows"] if not is_last else []
+        for row, is_last in zip(res, is_lasts)
     ]
     is_lasts = [not bool(i) for i in tokens]
 
@@ -78,29 +77,38 @@ def get_report(
         else _return + get_report(resource, builders, tokens, is_lasts)
     )
 
-def _transform_report(column_header: ColumnHeader, row: Rows):
+
+def _transform_report(column_header: ColumnHeader, rows: Row):
     dimension_header = [i.replace("ga:", "") for i in column_header["dimensions"]]
     metric_header = [
         i["name"].replace("ga:", "")
         for i in column_header["metricHeader"]["metricHeaderEntries"]
     ]
 
-    dimension_values = {
-        k: datetime.strptime(v, "%Y%m%d").date().isoformat() if k == "date" else v
-        for k, v in dict(zip(dimension_header, row["dimensions"])).items()
-    }
-    metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
+    dimension_values = [
+        {
+            k: datetime.strptime(v, "%Y%m%d").date().isoformat() if k == "date" else v
+            for k, v in dict(zip(dimension_header, row["dimensions"])).items()  # type: ignore
+        }
+        for row in rows
+    ]
+    metric_values = [
+        dict(zip(metric_header, row["metrics"][0]["values"])) for row in rows  # type: ignore
+    ]
 
-    return {
-        **dimension_values,
-        **metric_values,
-    }
+    return [
+        {
+            **dimension_value,
+            **metric_value,
+        }
+        for dimension_value, metric_value in zip(dimension_values, metric_values)
+    ]
+
 
 def transform_page(report_page: ReportRes):
     return [
-        [
-            _transform_report(column_header, row)
-            for column_header, row in zip(column_headers, rows)
+        _transform_report(column_header, row)
+        for column_header, row in [
+            (column_headers, rows) for column_headers, rows in zip(*report_page)
         ]
-        for column_headers, rows in report_page
     ]
