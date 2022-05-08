@@ -1,6 +1,8 @@
 from typing import Any
 
-from universal_analytics.callio_controller import callio_controller
+from universal_analytics.universal_analytics_controller import (
+    universal_analytics_controller,
+)
 from tasks import tasks_service
 
 
@@ -10,7 +12,7 @@ def main(request) -> dict[str, Any]:
     print(body)
 
     result = (
-        callio_controller(body)
+        universal_analytics_controller(body)
         if "table" in body
         else tasks_service.create_tasks_service(body)
     )
